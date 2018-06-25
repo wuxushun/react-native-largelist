@@ -10,6 +10,7 @@
 import React from "react";
 import { ScrollView, ViewPropTypes, Platform } from "react-native";
 import PropTypes from "prop-types";
+import { listenToKeyboardEvents } from 'react-native-keyboard-aware-scroll-view'
 
 //   Event List:
 //
@@ -40,10 +41,10 @@ class EventScrollView extends ScrollView {
   };
 
   static defaultProps = {
-    llonTouchStart: () => {},
-    llonTouchMove: () => {},
-    llonTouchEnd: () => {},
-    llonResponderGrant: ()=>{}
+    llonTouchStart: () => { },
+    llonTouchMove: () => { },
+    llonTouchEnd: () => { },
+    llonResponderGrant: () => { }
   };
 
   orgOnTouchStart;
@@ -103,7 +104,7 @@ class EventScrollView extends ScrollView {
   //   return false;
   // }
 
-  onResponderGrant(e){
+  onResponderGrant(e) {
     this.orgOnResponderGrant(e);
     this.props.llonResponderGrant(e);
   }
@@ -115,4 +116,4 @@ class EventScrollView extends ScrollView {
 
 }
 
-export { EventScrollView };
+export default listenToKeyboardEvents(EventScrollView);

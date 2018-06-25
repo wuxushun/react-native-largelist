@@ -25,7 +25,8 @@ import PropTypes from "prop-types";
 import { LargeListCell } from "./LargeListCell";
 import { LargeListSection } from "./LargeListSection";
 import { TableView } from "../tableview";
-import { EventScrollView } from "./EventScrollView";
+import EventScrollView from "./EventScrollView";
+
 
 interface Size {
   width: number,
@@ -104,12 +105,26 @@ class LargeList extends React.Component {
       "handled",
       false,
       true
-    ])
+    ]),
 
     // onIndexPathDidAppear: PropTypes.func,
     // onIndexPathDidDisappear: PropTypes.func,
     // onSectionDidAppear: PropTypes.func,
     // onSectionDidDisappear: PropTypes.func
+
+    viewIsInsideTabBar: PropTypes.bool,
+    resetScrollToCoords: PropTypes.shape({
+      x: PropTypes.number.isRequired,
+      y: PropTypes.number.isRequired
+    }),
+    enableResetScrollToCoords: PropTypes.bool,
+    enableAutomaticScroll: PropTypes.bool,
+    extraHeight: PropTypes.number,
+    extraScrollHeight: PropTypes.number,
+    keyboardOpeningTime: PropTypes.number,
+    update: PropTypes.func,
+    enableOnAndroid: PropTypes.bool,
+    innerRef: PropTypes.func,
   };
   static defaultProps = {
     numberOfSections: () => 1,
@@ -259,7 +274,7 @@ class LargeList extends React.Component {
     if (!numberOfCellPoolSize)
       numberOfCellPoolSize =
         (Dimensions.get("window").height + 2 * this.props.safeMargin) /
-          this.minCellHeight +
+        this.minCellHeight +
         0.5;
     for (let i = 0; i < numberOfCellPoolSize; ++i) {
       this.cells.push(this._createCell(0, 0, -10000, this.freeRefs));
@@ -321,16 +336,16 @@ class LargeList extends React.Component {
     let refreshControl =
       this.props.onRefresh !== undefined
         ? <RefreshControl
-            refreshing={this.props.refreshing}
-            onRefresh={this.props.onRefresh}
-          />
+          refreshing={this.props.refreshing}
+          onRefresh={this.props.onRefresh}
+        />
         : null;
     let contentStyle = {
       alignSelf: "stretch",
       height: empty
         ? null
         : this.contentSize.height +
-          (this.props.onLoadMore ? this.props.heightForLoadMore() : 0)
+        (this.props.onLoadMore ? this.props.heightForLoadMore() : 0)
     };
     let loadMoreStyle = [
       styles.absoluteStretch,
@@ -348,70 +363,83 @@ class LargeList extends React.Component {
     ];
     return (
       <View {...this.props}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flex: 1 }}
-          bounces={false}
+        <EventScrollView
+          innerRef={this._handleInnerRef}
+          scrollEnabled={this.props.scrollEnabled}
+          bounces={this.props.bounces}
+          refreshControl={refreshControl}
+          contentContainerStyle={contentStyle}
           keyboardShouldPersistTaps={this.props.keyboardShouldPersistTaps}
+          onLayout={this._onLayout.bind(this)}
+          style={{ flex: 1 }}
+          scrollEventThrottle={this.props.scrollEventThrottle}
+          onScroll={this._onScroll.bind(this)}
+          onMomentumScrollEnd={this._onScrollEnd.bind(this)}
+          showsVerticalScrollIndicator={
+            this.props.showsVerticalScrollIndicator
+          }
+          scrollsToTop={
+            this.props.scrollsToTop
+          }
+          llonTouchStart={this._onTouchStart.bind(this)}
+          llonTouchMove={this._onTouchMove.bind(this)}
+          llonTouchEnd={this._onTouchEnd.bind(this)}
+
+          viewIsInsideTabBar={this.props.viewIsInsideTabBar}
+          resetScrollToCoords={this.props.resetScrollToCoords}
+          enableResetScrollToCoords={this.props.enableResetScrollToCoords}
+          enableAutomaticScroll={this.props.enableAutomaticScroll}
+          extraHeight={this.props.extraHeight}
+          extraScrollHeight={this.props.extraScrollHeight}
+          keyboardOpeningTime={this.props.keyboardOpeningTime}
+          update={this.props.update}
+          enableOnAndroid={this.props.enableOnAndroid}
         >
-          <EventScrollView
-            ref={ref => (this.scrollViewRef = ref)}
-            scrollEnabled={this.props.scrollEnabled}
-            bounces={this.props.bounces}
-            refreshControl={refreshControl}
-            contentContainerStyle={contentStyle}
-            keyboardShouldPersistTaps={this.props.keyboardShouldPersistTaps}
-            onLayout={this._onLayout.bind(this)}
-            style={{ flex: 1 }}
-            scrollEventThrottle={this.props.scrollEventThrottle}
-            onScroll={this._onScroll.bind(this)}
-            onMomentumScrollEnd={this._onScrollEnd.bind(this)}
-            showsVerticalScrollIndicator={
-              this.props.showsVerticalScrollIndicator
-            }
-            scrollsToTop={
-              this.props.scrollsToTop
-            }
-            llonTouchStart={this._onTouchStart.bind(this)}
-            llonTouchMove={this._onTouchMove.bind(this)}
-            llonTouchEnd={this._onTouchEnd.bind(this)}
+          <View
+            style={headerStyle}
+            onLayout={this._onHeaderLayout.bind(this)}
+            ref={ref => (this.headerRef = ref)}
           >
-            <View
-              style={headerStyle}
-              onLayout={this._onHeaderLayout.bind(this)}
-              ref={ref => (this.headerRef = ref)}
-            >
-              {this.props.renderHeader()}
-            </View>
-            {empty && this.props.renderEmpty()}
-            {this.sections.map(item => item)}
-            {this.cells.map(item => item)}
-            <View
-              style={footerStyle}
-              onLayout={this._onFooterLayout.bind(this)}
-              ref={ref => (this.footerRef = ref)}
-            >
-              {this.props.renderFooter()}
-            </View>
-            {!empty &&
-              this.props.onLoadMore &&
-              <View style={loadMoreStyle}>
-                {this.props.allLoadCompleted
-                  ? this.props.renderLoadCompleted()
-                  : this.props.renderLoadingMore()}
-              </View>}
-          </EventScrollView>
-          <LargeListSection
-            style={hangSectionStyle}
-            section={this.currentSection}
-            renderSection={this.props.renderSection}
-            ref={reference => (this.currentSectionRef = reference)}
-            numberOfSections={this.numberOfSections}
-            heightForSection={this.props.heightForSection}
-          />
-        </ScrollView>
-      </View>
+            {this.props.renderHeader()}
+          </View>
+          {empty && this.props.renderEmpty()}
+          {this.sections.map(item => item)}
+          {this.cells.map(item => item)}
+          <View
+            style={footerStyle}
+            onLayout={this._onFooterLayout.bind(this)}
+            ref={ref => (this.footerRef = ref)}
+          >
+            {this.props.renderFooter()}
+          </View>
+          {!empty &&
+            this.props.onLoadMore &&
+            <View style={loadMoreStyle}>
+              {this.props.allLoadCompleted
+                ? this.props.renderLoadCompleted()
+                : this.props.renderLoadingMore()}
+            </View>}
+        </EventScrollView>
+        <LargeListSection
+          style={hangSectionStyle}
+          section={this.currentSection}
+          renderSection={this.props.renderSection}
+          ref={reference => (this.currentSectionRef = reference)}
+          numberOfSections={this.numberOfSections}
+          heightForSection={this.props.heightForSection}
+        />
+      </View >
     );
+  }
+
+  _handleInnerRef = (el: any) => {
+    const {
+      innerRef
+    } = this.props
+    if (innerRef) {
+      innerRef(el)
+    }
+    this.scrollViewRef = el
   }
 
   _createSection(section: number, top: number, refs: LargeListSection[]) {
@@ -752,10 +780,10 @@ class LargeList extends React.Component {
     if (
       this.props.onLoadMore &&
       this.contentOffset.y >=
-        this.contentSize.height -
-          this.size.height +
-          this.props.heightForLoadMore() -
-          1
+      this.contentSize.height -
+      this.size.height +
+      this.props.heightForLoadMore() -
+      1
     ) {
       if (this.props.onLoadMore && !this.props.allLoadCompleted)
         this.enoughLoadMore = true;
@@ -768,9 +796,9 @@ class LargeList extends React.Component {
       this.scrollingAfterDraging &&
       offset.y > this.contentSize.height - this.size.height &&
       offset.y <
-        this.contentSize.height -
-          this.size.height +
-          this.props.heightForLoadMore()
+      this.contentSize.height -
+      this.size.height +
+      this.props.heightForLoadMore()
     ) {
       this.scrollingAfterDraging = false;
       this.scrollToEnd();
@@ -1110,7 +1138,7 @@ class LargeList extends React.Component {
     this.draging = true;
   }
 
-  _onTouchMove(offset) {}
+  _onTouchMove(offset) { }
 
   _onTouchEnd() {
     if (!this.props.onLoadMore) return;
@@ -1118,9 +1146,9 @@ class LargeList extends React.Component {
     if (
       this.contentOffset.y > this.contentSize.height - this.size.height &&
       this.contentOffset.y <
-        this.contentSize.height -
-          this.size.height +
-          this.props.heightForLoadMore()
+      this.contentSize.height -
+      this.size.height +
+      this.props.heightForLoadMore()
     ) {
       this.scrollToEnd();
       return;
@@ -1153,9 +1181,9 @@ class LargeList extends React.Component {
       !this.loadingMore &&
       !this.props.allLoadCompleted &&
       this.contentOffset.y >=
-        this.contentSize.height -
-          this.size.height +
-          this.props.heightForLoadMore()
+      this.contentSize.height -
+      this.size.height +
+      this.props.heightForLoadMore()
     ) {
       this.loadingMore = true;
       this.props.onLoadMore();
