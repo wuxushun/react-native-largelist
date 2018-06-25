@@ -18,7 +18,7 @@ import {
   Dimensions
 } from "react-native";
 import PropTypes from "prop-types";
-import { EventScrollView } from "./EventScrollView";
+import EventScrollView from "./EventScrollView";
 
 interface IndexPath {
   section: number,
@@ -164,7 +164,7 @@ class LargeListCell extends React.Component {
         ]}
       >
         <EventScrollView
-          ref={ref => (this._scrollView = ref)}
+          innerRef={ref => (this._scrollView = ref)}
           style={{ flex: 1 }}
           contentContainerStyle={contentStyle}
           horizontal={true}
